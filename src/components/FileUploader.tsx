@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Upload } from 'lucide-react';
+import { KnowledgeGraphData } from '@/types/knowledge-graph';
 
 interface FileUploaderProps {
   onFileUpload: (file: File) => void;
@@ -12,6 +13,20 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const validateGraphData = (data: any): data is KnowledgeGraphData => {
+    if (!data || typeof data !== 'object') return false;
+    if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) return false;
+    
+    return data.nodes.every((node: any) => (
+      typeof node.id === 'string' &&
+      typeof node.label === 'string' &&
+      typeof node.category === 'string'
+    )) && data.edges.every((edge: any) => (
+      typeof edge.source === 'string' &&
+      typeof edge.target === 'string'
+    ));
+  };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -26,7 +41,6 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-
     const files = e.dataTransfer.files;
     handleFiles(files);
   };
@@ -36,36 +50,55 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
     handleFiles(files);
   };
 
-  const handleFiles = (files: FileList | null) => {
+  const handleFiles = async (files: FileList | null) => {
     if (files && files.length > 0) {
       const selectedFile = files[0];
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
       
-      if (!allowedTypes.includes(selectedFile.type)) {
+      if (selectedFile.type !== 'application/json' && !selectedFile.name.endsWith('.json')) {
         toast({
           title: "Invalid file type",
-          description: "Please upload a PDF or Word document (.pdf, .doc, .docx)",
+          description: "Please upload a JSON file (.json)",
           variant: "destructive"
         });
         return;
       }
 
-      if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
+      if (selectedFile.size > 5 * 1024 * 1024) { // 5MB limit
         toast({
           title: "File too large",
-          description: "Please upload a file smaller than 10MB",
+          description: "Please upload a file smaller than 5MB",
           variant: "destructive"
         });
         return;
       }
 
-      setFile(selectedFile);
-      onFileUpload(selectedFile);
-      
-      toast({
-        title: "File uploaded successfully",
-        description: `${selectedFile.name} has been uploaded`,
-      });
+      try {
+        const text = await selectedFile.text();
+        const jsonData = JSON.parse(text);
+        
+        if (!validateGraphData(jsonData)) {
+          toast({
+            title: "Invalid JSON structure",
+            description: "The JSON file does not match the required graph data structure",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        setFile(selectedFile);
+        onFileUpload(selectedFile);
+        
+        toast({
+          title: "File uploaded successfully",
+          description: `${selectedFile.name} has been validated and uploaded`,
+        });
+      } catch (error) {
+        toast({
+          title: "Error processing file",
+          description: "The file contains invalid JSON data",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -88,18 +121,18 @@ const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
           <Upload size={24} className="text-gdpr-primary" aria-hidden="true" />
         </div>
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Upload Annual Report</h2>
-          <p className="text-gdpr-muted mb-4">Drag and drop your company's annual report or click to browse</p>
-          <p className="text-xs text-gdpr-muted">Supported formats: PDF, DOC, DOCX (Max 10MB)</p>
+          <h2 className="text-xl font-semibold mb-2">Upload Knowledge Graph</h2>
+          <p className="text-gdpr-muted mb-4">Drag and drop your knowledge graph JSON file or click to browse</p>
+          <p className="text-xs text-gdpr-muted">Supported format: JSON (Max 5MB)</p>
         </div>
 
         <input 
           ref={fileInputRef}
           type="file" 
           className="hidden" 
-          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
+          accept=".json,application/json" 
           onChange={handleFileInput}
-          aria-label="Upload file input"
+          aria-label="Upload JSON file input"
         />
         
         <button 
