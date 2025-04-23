@@ -1,0 +1,24 @@
+
+{
+  "nodes": [
+    {
+      "id": "article5", 
+      "label": "Article 5", 
+      "category": "article", 
+      "description": "Principles relating to processing of personal data"
+    },
+    {
+      "id": "article6", 
+      "label": "Article 6", 
+      "category": "article", 
+      "description": "Lawfulness of processing"
+    }
+  ],
+  "edges": [
+    {
+      "source": "article5",
+      "target": "article6",
+      "label": "Related Principle"
+    }
+  ]
+}
