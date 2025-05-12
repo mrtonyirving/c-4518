@@ -1,3 +1,4 @@
+
 /// <reference types="node" />
 
 import path from "path"
@@ -19,5 +20,8 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     allowedHosts: ["c71b0e31-3c74-4beb-8ccf-1005903cddbc.lovableproject.com"]
+  },
+  optimizeDeps: {
+    exclude: ['@rollup/rollup-linux-x64-gnu']
   }
 }))
